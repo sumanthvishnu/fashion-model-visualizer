@@ -1,57 +1,59 @@
 # Fashion Model Visualizer
 
-AI-powered tool for visualizing lingerie products on models. Generate multiple variations instantly with zero content restrictions.
-
-**Powered by RunPod Serverless** (recommended by Banana.dev as the best migration alternative)
-
----
-
-## Features
-
-- ✅ **Upload product image** - Drag & drop or click to select
-- ✅ **One simple prompt** - No positive/negative prompts, just describe what you want
-- ✅ **Generate multiple variations** - Choose 1, 2, 4, or 8 images at once
-- ✅ **AI automatically varies** - Poses, angles, lighting, expressions
-- ✅ **Download individually or all at once**
-- ✅ **Zero content restrictions** - Full creative freedom
-- ✅ **Warm mode** - No cold start delays
-- ✅ **Private** - Your images stay in your isolated instance
+AI-powered tool for visualizing models with different body types, poses, and outfits while keeping the face consistent. Perfect for casting decisions in lingerie/fashion photography.
 
 ---
 
 ## How It Works
 
-### Simple 3-Step Process:
+1. **Upload a model's photo** - The AI will keep their face consistent
+2. **Describe what you want** - Body type, outfit, pose, setting
+3. **Generate variations** - See the same model in different scenarios
 
-1. **Upload** your lingerie product image
-2. **Enter one prompt** describing the model and scene
-3. **Select how many variations** you want (1/2/4/8)
-4. **Click Generate** - Get all images at once!
+### Example Use Cases:
 
-### Example Prompt:
-```
-Plus-size model wearing this lingerie, confident pose, soft studio lighting, elegant professional fashion photography
-```
-
-**AI will automatically create variations with:**
-- Different poses (standing, sitting, leaning)
-- Different angles (front, side, 3/4 view)
-- Different lighting (soft, dramatic, natural)
-- Different expressions (confident, playful, serious)
+- **Casting Decision**: Upload a lean model's photo, visualize how they'd look as plus-size
+- **Outfit Testing**: Same model, different lingerie styles
+- **Pose Variations**: Same model, different poses and angles
+- **Setting Preview**: Same model, different backgrounds (studio, bedroom, etc.)
 
 ---
 
-## Why RunPod Serverless?
+## Features
 
-Banana.dev shut down their serverless GPU platform on March 31st, 2024. They **officially recommended RunPod Serverless** as the best alternative:
+- ✅ **Face consistency** - Same model face across all variations
+- ✅ **Body type changes** - Visualize plus-size, curvy, athletic, slim
+- ✅ **Outfit variations** - Different lingerie, robes, styles
+- ✅ **Pose control** - Standing, sitting, side profile, full body
+- ✅ **Setting changes** - Studio, bedroom, outdoor, plain background
+- ✅ **Generate multiple variations** - 1, 2, 4, or 8 images at once
+- ✅ **Download individually or all at once**
+- ✅ **Zero content restrictions** - Full creative freedom
+- ✅ **Warm mode** - No cold start delays
 
-| Feature | RunPod Serverless |
-|---------|-------------------|
-| **Setup** | Easy (most "banana-like") |
-| **Restrictions** | **Minimal** |
-| **Pricing** | ~$0.20-0.40/hour warm mode |
-| **Cold start** | Yes (use warm mode to avoid) |
-| **Privacy** | High (isolated GPU instance) |
+---
+
+## Example Prompts
+
+### Body Type Testing:
+```
+Plus-size body type, wearing elegant black lace lingerie, confident standing pose, soft studio lighting, professional fashion photography
+```
+
+### Outfit Variations:
+```
+Same model, wearing red silk robe, sitting on velvet chair, warm golden lighting, luxury bedroom setting
+```
+
+### Pose Testing:
+```
+Side profile pose, wearing white lace bra and panties, dramatic rim lighting, black background, high fashion editorial style
+```
+
+### Setting Preview:
+```
+Full body shot, wearing nude-colored lingerie set, natural window lighting, minimalist white studio background
+```
 
 ---
 
@@ -64,53 +66,28 @@ Banana.dev shut down their serverless GPU platform on March 31st, 2024. They **o
 
 ### Step 2: Get Your API Key
 1. In RunPod dashboard, click **Settings** (gear icon)
-2. Click **API Keys**
+2. Click **"API Keys"**
 3. Click **"Create API Key"**
-4. Copy the key (starts with `rpa_...`)
-5. **SAVE THIS** - you'll need it
+4. Copy the key (starts with `rpa_`)
 
 ### Step 3: Deploy Serverless Endpoint
 1. In RunPod dashboard, click **"Serverless"**
-2. Click **"Deploy"** or **"New Endpoint"**
-3. Search for template: `ComfyUI Flux` or `Flux IP-Adapter`
+2. Click **"New Endpoint"**
+3. Search for: `ComfyUI Flux` or `Flux IP-Adapter`
 4. Click **Deploy**
 
 ### Step 4: Configure GPU Workers (IMPORTANT!)
-This enables "warm mode" for instant generation:
-
-| Setting | Value |
-|---------|-------|
-| **Min Workers** | `1` (keeps GPU warm) |
-| **Max Workers** | `3` (handles multiple requests) |
-
-Click **Save**
+Set for warm mode (instant generation):
+- **Min Workers**: `1`
+- **Max Workers**: `3`
+- Click **Save**
 
 ### Step 5: Copy Endpoint ID
-1. After deployment, you'll see an **Endpoint ID**
+1. After deployment, copy the **Endpoint ID**
 2. Looks like: `abc123def-xyz789`
-3. **SAVE THIS** - you'll need it too
 
-### Step 6: Add to Environment Variables
-
-**Mac/Linux:**
-```bash
-export RUNPOD_API_KEY=rpa_your_key_here
-export RUNPOD_ENDPOINT_ID=your_endpoint_id_here
-```
-
-**Windows:**
-```cmd
-set RUNPOD_API_KEY=rpa_your_key_here
-set RUNPOD_ENDPOINT_ID=your_endpoint_id_here
-```
-
-### Step 7: Start the App
-```bash
-cd /mnt/okcomputer/output/app
-npm run server
-```
-
-Open **http://localhost:3001**
+### Step 6: Deploy App to Render
+Follow the deployment guide in `QUICK_START.md`
 
 ---
 
@@ -120,17 +97,19 @@ Open **http://localhost:3001**
 |---------|------|
 | **Warm mode GPU** | ~$0.20-0.40/hour |
 | **Per image** | ~$0.006-0.01 |
-| **15-20 images session** | ~$0.15-0.30 |
+| **15-20 variations session** | ~$0.15-0.30 |
 
 **With $10 free credit = ~30-60 sessions FREE!**
 
-### Cost Comparison
+---
 
-| Provider | Per Image | Restrictions | Setup |
-|----------|-----------|--------------|-------|
-| **RunPod Serverless** | ~$0.006-0.01 | **Minimal** | Medium |
-| Replicate | ~$0.025 | Some | Easy |
-| Self-hosted | ~$0.001 | None | Hard |
+## Why RunPod Serverless?
+
+- ✅ **Zero content restrictions** - Your own GPU instance
+- ✅ **Face consistency** - Using IP-Adapter FaceID technology
+- ✅ **Full privacy** - Images not shared with anyone
+- ✅ **Warm mode** - Set Min Workers=1 for instant generation
+- ✅ **ComfyUI with Flux.1** - State-of-the-art image quality
 
 ---
 
@@ -141,21 +120,19 @@ Open **http://localhost:3001**
 │  Fashion Model Visualizer                       │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│  [Upload Product Image]                         │
+│  [Upload Model Photo]                           │
 │  ┌─────────────────────────┐                   │
-│  │  Drag image here        │                   │
-│  │  or click to select     │                   │
+│  │  Drag model photo here  │                   │
+│  │  Face will stay same    │                   │
 │  └─────────────────────────┘                   │
 │                                                 │
-│  [Enter Prompt]                                 │
+│  [Describe the Scene]                           │
 │  ┌─────────────────────────┐                   │
-│  │ Plus-size model wearing │                   │
-│  │ this lingerie, soft     │                   │
-│  │ studio lighting...      │                   │
+│  │ Plus-size body type,    │                   │
+│  │ wearing red lace...     │                   │
 │  └─────────────────────────┘                   │
 │                                                 │
-│  Number of Variations: [ 4 ▼]                  │
-│  Seed (optional): [________]                    │
+│  Variations: [ 4 ▼]                            │
 │                                                 │
 │  [ Generate 4 Variations ]                      │
 │                                                 │
@@ -164,68 +141,32 @@ Open **http://localhost:3001**
 
 ---
 
-## Example Workflows
+## Prompt Tips
 
-### Workflow 1: Single Product, Multiple Poses
-1. Upload: `red_lace_bra.jpg`
-2. Prompt: `Plus-size model wearing this red lace bra, confident pose, soft studio lighting, professional fashion photography`
-3. Select: **8 variations**
-4. Result: 8 different poses/angles of the same product
-
-### Workflow 2: Find the Perfect Shot
-1. Upload: `black_panty_set.jpg`
-2. Prompt: `Curvy model in elegant black lingerie, luxury bedroom setting, warm golden lighting`
-3. Select: **4 variations**
-4. Pick the best one for your ad
-
-### Workflow 3: Casting Decision
-1. Upload: `new_collection_piece.jpg`
-2. Prompt: `Full-figured model, editorial fashion style, dramatic rim lighting, black background`
-3. Select: **8 variations**
-4. Show client options, pick model look
-
----
-
-## Tips for Best Results
-
-1. **Upload clear product images** - Well-lit, centered, no background clutter
-2. **Be specific about model type** - "Plus-size", "curvy", "full-figured"
-3. **Describe lighting** - "soft studio", "dramatic", "natural", "golden hour"
-4. **Mention mood** - "elegant", "confident", "playful", "sensual"
-5. **Generate 4-8 variations** - More options to choose from
-6. **Use same seed** - For similar variations with minor changes
+| Element | Examples |
+|---------|----------|
+| **Body Type** | plus-size, curvy, athletic, slim, voluptuous |
+| **Outfit** | red lace bra, black silk robe, white lingerie set |
+| **Pose** | standing, sitting, side profile, full body, close-up |
+| **Lighting** | soft studio, dramatic, natural, golden hour, rim lighting |
+| **Setting** | studio, bedroom, outdoor, plain background, luxury interior |
+| **Mood** | elegant, confident, playful, sensual, professional |
 
 ---
 
 ## Troubleshooting
 
 **"Setup Required" message?**
-→ Your RunPod API key or Endpoint ID isn't set. Follow the setup steps above.
+→ Your RunPod API key or Endpoint ID isn't set.
 
-**Images not generating?**
-→ Check that your RunPod endpoint is active (green status in dashboard).
+**Face not consistent?**
+→ Upload a clearer face photo (front-facing, good lighting)
 
 **Slow generation?**
-→ Make sure Min Workers = 1 in your endpoint settings (warm mode).
+→ Make sure Min Workers = 1 in your RunPod endpoint settings.
 
 **Need help?**
 → RunPod Discord: https://discord.gg/runpod
-→ Email: support@runpod.io
-
----
-
-## Migration from Banana.dev
-
-If you were using Banana.dev before they shut down:
-
-| What to Change | Banana | RunPod |
-|----------------|--------|--------|
-| API Key | `banana_...` | `rpa_...` |
-| Environment Var | `BANANA_API_KEY` | `RUNPOD_API_KEY` |
-| Extra Var | `BANANA_MODEL_KEY` | `RUNPOD_ENDPOINT_ID` |
-| Pricing | ~$0.10/hour | ~$0.20-0.40/hour |
-
-The app interface and workflow stay exactly the same!
 
 ---
 
@@ -233,22 +174,9 @@ The app interface and workflow stay exactly the same!
 
 - `src/App.tsx` - Frontend code
 - `server.js` - RunPod API backend
-- `dist/` - Built app (deployed)
-- `QUICK_START.md` - Simple step-by-step guide
+- `dist/` - Built app
+- `QUICK_START.md` - Deployment guide
 
 ---
 
-## Cost Comparison
-
-| Service | Cost per Image | Restrictions | Privacy |
-|---------|----------------|--------------|---------|
-| Midjourney | $0.05-0.10 | High | Low |
-| DALL-E 3 | $0.04-0.08 | High | Low |
-| Replicate | $0.025 | Medium | Medium |
-| **RunPod Serverless** | **$0.006-0.01** | **Minimal** | **High** |
-
-**RunPod is 5-10x cheaper with minimal restrictions!**
-
----
-
-Built for your lingerie business! 🎉
+Built for fashion casting decisions! 🎉

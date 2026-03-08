@@ -41,18 +41,56 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
   }
 
   const endpointUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/run`;
+  const actualSeed = seed || Math.floor(Math.random() * 2147483647);
 
-  // Build the input for ComfyUI workflow
-  const input = {
-    prompt: prompt,
-    image: imageBase64,
-    num_images: Math.min(numImages, 8),
-    width: 832,
-    height: 1216,
-    steps: 28,
-    cfg_scale: 3.5,
-    ...(seed ? { seed: seed } : {})
+  // Build ComfyUI workflow
+  const workflow = {
+    "1": {
+      "inputs": { "ckpt_name": "flux1-dev.safetensors" },
+      "class_type": "CheckpointLoaderSimple"
+    },
+    "2": {
+      "inputs": { "text": prompt, "clip": ["1", 1] },
+      "class_type": "CLIPTextEncode"
+    },
+    "3": {
+      "inputs": { "text": "blurry, low quality, distorted, ugly, bad anatomy", "clip": ["1", 1] },
+      "class_type": "CLIPTextEncode"
+    },
+    "4": {
+      "inputs": { "width": 832, "height": 1216, "batch_size": 1 },
+      "class_type": "EmptyLatentImage"
+    },
+    "5": {
+      "inputs": {
+        "seed": actualSeed,
+        "steps": 28,
+        "cfg": 3.5,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1,
+        "model": ["1", 0],
+        "positive": ["2", 0],
+        "negative": ["3", 0],
+        "latent_image": ["4", 0]
+      },
+      "class_type": "KSampler"
+    },
+    "6": {
+      "inputs": { "samples": ["5", 0], "vae": ["1", 2] },
+      "class_type": "VAEDecode"
+    },
+    "7": {
+      "inputs": { "filename_prefix": "output", "images": ["6", 0] },
+      "class_type": "SaveImage"
+    }
   };
+
+  // Add image loading node if image provided
+  let inputs = {};
+  if (imageBase64) {
+    inputs.images = [{ "name": "input.png", "image": imageBase64 }];
+  }
 
   console.log('Calling RunPod API...');
   console.log('Endpoint:', endpointUrl);
@@ -64,7 +102,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${RUNPOD_API_KEY}`
     },
-    body: JSON.stringify({ input })
+    body: JSON.stringify({ input: { workflow, ...inputs } })
   });
 
   if (!submitResponse.ok) {
@@ -81,7 +119,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
   const statusUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`;
   
   let attempts = 0;
-  const maxAttempts = 60; // 2 minutes max (2 sec intervals)
+  const maxAttempts = 90;
   
   while (attempts < maxAttempts) {
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -98,7 +136,21 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
     console.log('Status:', statusResult.status);
     
     if (statusResult.status === 'COMPLETED') {
-      return statusResult.output;
+      // Extract images from output
+      const images = [];
+      if (statusResult.output) {
+        const outputs = Array.isArray(statusResult.output) ? statusResult.output : [statusResult.output];
+        for (const out of outputs) {
+          if (out.images) {
+            for (const img of out.images) {
+              if (img.image || img.url) {
+                images.push(img.image || img.url);
+              }
+            }
+          }
+        }
+      }
+      return { images };
     } else if (statusResult.status === 'FAILED') {
       throw new Error(statusResult.error || 'Job failed');
     }
@@ -187,7 +239,7 @@ app.post('/api/generate-image', upload.single('image'), async (req, res) => {
     // If product image uploaded, convert to base64
     if (req.file) {
       imageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-      console.log('Product image processed');
+      console.log('Image processed');
     }
 
     // Call RunPod API

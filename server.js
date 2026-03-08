@@ -43,7 +43,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
   const endpointUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/run`;
   const actualSeed = seed || Math.floor(Math.random() * 2147483647);
 
-  // Build ComfyUI workflow
+  // Build ComfyUI workflow with IP-Adapter support
   const workflow = {
     "1": {
       "inputs": { "ckpt_name": "flux1-dev-fp8.safetensors" },
@@ -86,10 +86,22 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
     }
   };
 
-  // Add image loading node if image provided
-  let inputs = {};
+  // Add image loading node if image provided (IP-Adapter)
   if (imageBase64) {
-    inputs.images = [{ "name": "input.png", "image": imageBase64 }];
+    workflow["8"] = {
+      "inputs": { "image": "input.png" },
+      "class_type": "LoadImage"
+    };
+    // Note: You may need to add IP-Adapter nodes here depending on your workflow
+  }
+
+  const inputPayload = {
+    workflow: workflow
+  };
+
+  // Add images if provided
+  if (imageBase64) {
+    inputPayload.images = [{ "name": "input.png", "image": imageBase64 }];
   }
 
   console.log('Calling RunPod API...');
@@ -102,7 +114,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${RUNPOD_API_KEY}`
     },
-    body: JSON.stringify({ input: { workflow, ...inputs } })
+    body: JSON.stringify({ input: inputPayload })
   });
 
   if (!submitResponse.ok) {
@@ -112,52 +124,85 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
 
   const submitResult = await submitResponse.json();
   const jobId = submitResult.id;
-  
+
   console.log('Job submitted:', jobId);
 
   // Step 2: Poll for results
   const statusUrl = `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/status/${jobId}`;
-  
+
   let attempts = 0;
   const maxAttempts = 90;
-  
+
   while (attempts < maxAttempts) {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     const statusResponse = await fetch(statusUrl, {
       headers: { 'Authorization': `Bearer ${RUNPOD_API_KEY}` }
     });
-    
+
     if (!statusResponse.ok) {
       throw new Error('Failed to check job status');
     }
-    
+
     const statusResult = await statusResponse.json();
     console.log('Status:', statusResult.status);
-    
+
     if (statusResult.status === 'COMPLETED') {
-      // Extract images from output
-      const images = [];
+      console.log('Raw output:', JSON.stringify(statusResult.output, null, 2));
+
+      // Extract images from output - handle multiple formats
+      let images = [];
+
       if (statusResult.output) {
-        const outputs = Array.isArray(statusResult.output) ? statusResult.output : [statusResult.output];
-        for (const out of outputs) {
-          if (out.images) {
-            for (const img of out.images) {
-              if (img.image || img.url) {
-                images.push(img.image || img.url);
+        // Format 1: Direct array of base64 strings
+        if (Array.isArray(statusResult.output)) {
+          images = statusResult.output.filter(item => typeof item === 'string' && item.startsWith('data:image'));
+        }
+        // Format 2: Object with images array
+        else if (statusResult.output.images && Array.isArray(statusResult.output.images)) {
+          images = statusResult.output.images.map(img => {
+            if (typeof img === 'string') return img;
+            if (img.image) return img.image;
+            if (img.url) return img.url;
+            if (img.base64) return `data:image/png;base64,${img.base64}`;
+            return null;
+          }).filter(Boolean);
+        }
+        // Format 3: Single image object
+        else if (typeof statusResult.output === 'object') {
+          // Check for any base64 data in the output
+          const values = Object.values(statusResult.output);
+          for (const val of values) {
+            if (typeof val === 'string' && val.startsWith('data:image')) {
+              images.push(val);
+            } else if (Array.isArray(val)) {
+              for (const item of val) {
+                if (typeof item === 'string' && item.startsWith('data:image')) {
+                  images.push(item);
+                } else if (item && (item.image || item.url || item.base64)) {
+                  images.push(item.image || item.url || (item.base64 ? `data:image/png;base64,${item.base64}` : null));
+                }
               }
             }
           }
         }
+        // Format 4: Direct base64 string
+        else if (typeof statusResult.output === 'string' && statusResult.output.startsWith('data:image')) {
+          images = [statusResult.output];
+        }
       }
+
+      console.log(`Found ${images.length} images`);
       return { images };
+
     } else if (statusResult.status === 'FAILED') {
+      console.error('Job failed:', statusResult.error);
       throw new Error(statusResult.error || 'Job failed');
     }
-    
+
     attempts++;
   }
-  
+
   throw new Error('Generation timeout');
 }
 
@@ -165,7 +210,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
 app.get('/api/status', async (req, res) => {
   const hasKey = !!RUNPOD_API_KEY;
   const hasEndpoint = !!RUNPOD_ENDPOINT_ID;
-  
+
   if (!hasKey || !hasEndpoint) {
     return res.json({
       connected: false,
@@ -179,7 +224,7 @@ app.get('/api/status', async (req, res) => {
     const response = await fetch(`https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/health`, {
       headers: { 'Authorization': `Bearer ${RUNPOD_API_KEY}` }
     });
-    
+
     if (response.ok) {
       res.json({
         connected: true,
@@ -225,7 +270,7 @@ app.post('/api/generate-image', upload.single('image'), async (req, res) => {
     }
 
     const { description, numImages = 1, seed } = req.body;
-    
+
     if (!description) {
       return res.status(400).json({ error: 'Description is required' });
     }
@@ -252,6 +297,7 @@ app.post('/api/generate-image', upload.single('image'), async (req, res) => {
     );
 
     console.log('Generation complete!');
+    console.log('Result:', JSON.stringify(result, null, 2));
 
     // Process the result
     if (result && result.images && result.images.length > 0) {
@@ -261,14 +307,16 @@ app.post('/api/generate-image', upload.single('image'), async (req, res) => {
         count: result.images.length
       });
     } else {
-      throw new Error('No images generated');
+      console.error('No images in result:', result);
+      throw new Error('No images generated - check RunPod endpoint output format');
     }
 
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({
       error: 'Failed to generate image',
-      message: error.message
+      message: error.message,
+      details: error.stack
     });
   }
 });

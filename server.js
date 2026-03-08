@@ -148,12 +148,41 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
     console.log('Status:', statusResult.status);
 
     if (statusResult.status === 'COMPLETED') {
-      console.log('Raw output:', JSON.stringify(statusResult.output, null, 2));
+      console.log('Raw status result:', JSON.stringify(statusResult, null, 2));
 
-      // Extract images from output - handle multiple formats
+      // Extract images from output - handle multiple formats including raw_output
       let images = [];
 
-      if (statusResult.output) {
+      // First, try to parse raw_output if it exists (this is where your images are!)
+      if (statusResult.raw_output) {
+        try {
+          const rawOutput = typeof statusResult.raw_output === 'string' 
+            ? JSON.parse(statusResult.raw_output) 
+            : statusResult.raw_output;
+          
+          console.log('Parsed raw_output:', JSON.stringify(rawOutput, null, 2));
+          
+          if (rawOutput.images && Array.isArray(rawOutput.images)) {
+            images = rawOutput.images.map((img, index) => {
+              // Handle different image formats in raw_output
+              if (img.data) {
+                // Format: { data: "base64string", filename: "...", type: "base64" }
+                return `data:image/png;base64,${img.data}`;
+              } else if (typeof img === 'string') {
+                // Format: direct base64 string
+                if (img.startsWith('data:image')) return img;
+                return `data:image/png;base64,${img}`;
+              }
+              return null;
+            }).filter(Boolean);
+          }
+        } catch (e) {
+          console.log('Failed to parse raw_output:', e.message);
+        }
+      }
+
+      // Fallback: check regular output field if raw_output didn't work
+      if (images.length === 0 && statusResult.output) {
         // Format 1: Direct array of base64 strings
         if (Array.isArray(statusResult.output)) {
           images = statusResult.output.filter(item => typeof item === 'string' && item.startsWith('data:image'));
@@ -165,12 +194,12 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
             if (img.image) return img.image;
             if (img.url) return img.url;
             if (img.base64) return `data:image/png;base64,${img.base64}`;
+            if (img.data) return `data:image/png;base64,${img.data}`;
             return null;
           }).filter(Boolean);
         }
         // Format 3: Single image object
         else if (typeof statusResult.output === 'object') {
-          // Check for any base64 data in the output
           const values = Object.values(statusResult.output);
           for (const val of values) {
             if (typeof val === 'string' && val.startsWith('data:image')) {
@@ -179,8 +208,13 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
               for (const item of val) {
                 if (typeof item === 'string' && item.startsWith('data:image')) {
                   images.push(item);
-                } else if (item && (item.image || item.url || item.base64)) {
-                  images.push(item.image || item.url || (item.base64 ? `data:image/png;base64,${item.base64}` : null));
+                } else if (item && (item.image || item.url || item.base64 || item.data)) {
+                  const imgData = item.image || item.url || item.base64 || item.data;
+                  if (item.data || item.base64) {
+                    images.push(`data:image/png;base64,${imgData}`);
+                  } else {
+                    images.push(imgData);
+                  }
                 }
               }
             }

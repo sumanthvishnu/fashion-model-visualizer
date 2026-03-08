@@ -46,7 +46,7 @@ async function callRunPodAPI(imageBase64, prompt, numImages = 1, seed = null) {
   // Build ComfyUI workflow
   const workflow = {
     "1": {
-      "inputs": { "ckpt_name": "flux1-dev.safetensors" },
+      "inputs": { "ckpt_name": "flux1-dev-fp8.safetensors" },
       "class_type": "CheckpointLoaderSimple"
     },
     "2": {

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: fashion-model-visualizer
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BANANA_API_KEY
+        sync: false
+      - key: BANANA_MODEL_KEY
+        sync: false
+    plan: free
